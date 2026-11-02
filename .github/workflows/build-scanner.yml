@@ -27,6 +27,31 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Embed missing runtime framework
+        run: |
+          APP="build/Build/Products/Release-iphoneos/StandardCyborgExample.app"
+          PACKAGES="build/Build/Products/Release-iphoneos/PackageFrameworks"
+          mkdir -p "$APP/Frameworks"
+
+          for FRAMEWORK in StandardCyborgUI StandardCyborgFusion; do
+            SOURCE="$PACKAGES/$FRAMEWORK.framework"
+            DEST="$APP/Frameworks/$FRAMEWORK.framework"
+            if [ ! -d "$SOURCE" ]; then
+              echo "::error::Missing built framework: $SOURCE"
+              exit 1
+            fi
+            if [ ! -d "$DEST" ]; then
+              cp -R "$SOURCE" "$DEST"
+            fi
+            if [ ! -f "$DEST/$FRAMEWORK" ]; then
+              echo "::error::Missing executable in $DEST"
+              exit 1
+            fi
+            echo "Embedded $FRAMEWORK"
+          done
+
+          ls -la "$APP/Frameworks"
+
       - name: Create IPA
         run: |
           mkdir -p Payload
