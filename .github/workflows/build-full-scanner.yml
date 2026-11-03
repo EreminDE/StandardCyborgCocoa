@@ -1,0 +1,64 @@
+name: Build Full TrueDepth Scanner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/build-full-scanner.yml'
+
+jobs:
+  build:
+    runs-on: macos-15-intel
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Build full TrueDepthFusion app
+        run: |
+          xcodebuild \
+            -project StandardCyborgSDK.xcodeproj \
+            -scheme TrueDepthFusion \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-full \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Verify runtime framework
+        run: |
+          APP="build-full/Build/Products/Release-iphoneos/TrueDepthFusion.app"
+          PACKAGE="build-full/Build/Products/Release-iphoneos/PackageFrameworks"
+          test -f "$APP/TrueDepthFusion" || { echo "::error::Missing app executable"; exit 1; }
+          mkdir -p "$APP/Frameworks"
+
+          FRAMEWORK="StandardCyborgFusion"
+          DEST="$APP/Frameworks/$FRAMEWORK.framework"
+          if [ ! -d "$DEST" ]; then
+            SOURCE="$PACKAGE/$FRAMEWORK.framework"
+            test -d "$SOURCE" || { echo "::error::Missing $SOURCE"; exit 1; }
+            cp -R "$SOURCE" "$DEST"
+          fi
+          test -f "$DEST/$FRAMEWORK" || { echo "::error::Framework executable missing"; exit 1; }
+          echo "Verified $FRAMEWORK is embedded"
+
+      - name: Create IPA
+        run: |
+          mkdir -p Payload
+          cp -R build-full/Build/Products/Release-iphoneos/TrueDepthFusion.app Payload/
+          zip -qr TrueDepthFusion.ipa Payload
+          unzip -l TrueDepthFusion.ipa | grep 'Frameworks/StandardCyborgFusion.framework/StandardCyborgFusion'
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrueDepthFusion-full
+          path: TrueDepthFusion.ipa
+          if-no-files-found: error
