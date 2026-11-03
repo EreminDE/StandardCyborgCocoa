@@ -208,13 +208,14 @@ static _ICPCorrespondence _computeCorrespondence(const std::vector<math::Vec3>& 
     }
 #endif
     
-    float avgSquaredError = sumSquaredError / vertexCount;
+    // A nearly perfect alignment must not generate NaN weights (0 / 0).
+    const float avgSquaredError = std::max(1e-12f, (float)(sumSquaredError / vertexCount));
     float normalizedVarianceThreshold = config.outlierDeviationsThreshold * config.outlierDeviationsThreshold;
     
     for (size_t i = 0; i < vertexCount; i++) {
         float squaredError = (*squaredErrors)(i);
         float normalizedVariance = squaredError / avgSquaredError;
-        float weight = normalizedVariance > normalizedVarianceThreshold ? 0.0 : 1.0;
+        float weight = std::isfinite(normalizedVariance) && normalizedVariance <= normalizedVarianceThreshold ? 1.0f : 0.0f;
         
         (*weights)(i) = weight; // * sourceWeights[i];
     }
@@ -347,18 +348,47 @@ ICPResult ICP::run(ICPConfiguration config,
     static const float kTranslationLimit = 0.2;
     float squaredTranslationLimit = kTranslationLimit * kTranslationLimit;
     int iteration = 0;
-    
+
+    // Coarse-to-fine source sampling. The first few iterations use a reduced
+    // point set to capture wider camera motion at lower computational cost.
+    // All accepted transforms still update the full-resolution source cloud.
+    const int coarseIterations = vertexCount >= 256 ? std::min(4, std::max(1, config.maxIterations / 3)) : 0;
+    const size_t coarseStride = 4;
+    std::vector<math::Vec3> coarseVertices;
+    coarseVertices.reserve(vertexCount / coarseStride + 1);
+
     float previousError = 1e10;
-    
-    while (iteration++ < config.maxIterations && relativeError > config.tolerance) {
-        // Compute the correspondence between the points being source and the reference cloud
-        _ICPCorrespondence correspondence = _computeCorrespondence(sourceVertices,
+
+    while (iteration++ < config.maxIterations && (iteration <= coarseIterations || relativeError > config.tolerance)) {
+        const bool coarsePass = iteration <= coarseIterations;
+        const std::vector<math::Vec3>* correspondenceSource = &sourceVertices;
+        if (coarsePass) {
+            coarseVertices.clear();
+            for (size_t i = 0; i < vertexCount; i += coarseStride) {
+                coarseVertices.push_back(sourceVertices[i]);
+            }
+            correspondenceSource = &coarseVertices;
+        }
+
+        // Always perform at least one full-resolution iteration after the coarse pass.
+        if (iteration == coarseIterations + 1) {
+            previousError = 1e10f;
+            relativeError = config.tolerance * 10.0f;
+        }
+
+        std::vector<math::Vec3> coarseTargetVertices(coarsePass ? coarseVertices.size() : 0);
+        std::vector<math::Vec3> coarseTargetNormals(coarsePass ? coarseVertices.size() : 0);
+        Eigen::VectorXf coarseSquaredErrors(coarsePass ? coarseVertices.size() : 0);
+        Eigen::VectorXf coarseWeights(coarsePass ? coarseVertices.size() : 0);
+
+        // Match the selected point set to the complete accumulated model.
+        _ICPCorrespondence correspondence = _computeCorrespondence(*correspondenceSource,
                                                                    targetCloud,
                                                                    config,
-                                                                   targetVertices,
-                                                                   targetNormals,
-                                                                   squaredErrors.get(),
-                                                                   weights.get());
+                                                                   coarsePass ? coarseTargetVertices : targetVertices,
+                                                                   coarsePass ? coarseTargetNormals : targetNormals,
+                                                                   coarsePass ? &coarseSquaredErrors : squaredErrors.get(),
+                                                                   coarsePass ? &coarseWeights : weights.get());
         
         // Compute the transform mapping these correspondences from the source to the target vertices
         Eigen::Matrix4f sourceTransformAdjustment = _computePointToPlaneTransform(correspondence, config);
@@ -375,7 +405,7 @@ ICPResult ICP::run(ICPConfiguration config,
         // Calculate the correspondence error
         float rmsError = correspondence.computeRMSCorrespondenceError();
         
-        relativeError = fabsf(rmsError - previousError) / rmsError;
+        relativeError = fabsf(rmsError - previousError) / std::max(rmsError, 1e-6f);
         previousError = rmsError;
         sourceTransform = sourceTransformAdjustment * sourceTransform;
 
