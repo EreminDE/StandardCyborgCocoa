@@ -11,12 +11,45 @@
 #import <standard_cyborg/math/Mat3x4.hpp>
 #import <standard_cyborg/math/Vec2.hpp>
 #import <vector>
+#import <stdio.h>
+#import <sys/utsname.h>
 
 #import "EigenHelpers.hpp"
 #import "GeometryHelpers.hpp"
 #import "PerspectiveCamera+AVFoundation.hpp"
 
 using namespace standard_cyborg;
+
+// The physical front-camera sensor orientation is a *hardware property*.
+// An image with 16:9 dimensions does not necessarily come from a portrait-
+// mounted sensor: the capture preset can crop or scale older iPhone cameras.
+// iPhone 17 / iPhone Air models (iPhone18,*) introduced a portrait-mounted
+// front sensor. Earlier iPhones (including the iPhone 13 / iPhone14,5)
+// have a sideways-mounted front TrueDepth camera.
+static bool HasPortraitMountedFrontSensor()
+{
+    struct utsname info = {};
+    if (uname(&info) != 0) { return false; }
+
+    int hardwareGeneration = 0;
+    if (sscanf(info.machine, "iPhone%d,", &hardwareGeneration) == 1) {
+        return hardwareGeneration >= 18;
+    }
+
+    // Preserve the legacy layout on iPads / unidentified devices until
+    // their physical sensor orientation has been calibrated.
+    return false;
+}
+
+static bool UsePortraitFrontSensorMapping()
+{
+    // Diagnostic override used by *both* TrueDepthFusion and
+    // StandardCyborgExample. Set in iOS Settings; restart the app afterward.
+    NSString *mode = [[NSUserDefaults standardUserDefaults] stringForKey:@"SCTrueDepthSensorLayout"];
+    if ([mode isEqualToString:@"portrait"]) { return true; }
+    if ([mode isEqualToString:@"sideways"]) { return false; }
+    return HasPortraitMountedFrontSensor();
+}
 
 sc3d::PerspectiveCamera PerspectiveCameraFromAVCameraCalibrationData(AVCameraCalibrationData *calibrationData, size_t pixelsWide, size_t pixelsHigh)
 {
@@ -46,13 +79,23 @@ sc3d::PerspectiveCamera PerspectiveCameraFromAVCameraCalibrationData(AVCameraCal
     // coordinate system we otherwise prefer, so we post-multiply by an orientation matrix to
     // produce world space with x to the right, y up, and z toward the user.
     //
-    // On 4:3 TrueDepth sensors, the sensor's pixel-u axis points UP in portrait, so we swap
-    // X↔Y and negate Z. On 16:9 sensors (iPhone 17 Pro+), the pixel-u axis points RIGHT in
-    // portrait, so no swap is needed — just negate Y and Z.
-    CGSize refDims = calibrationData.intrinsicMatrixReferenceDimensions;
-    bool isWidescreenSensor = (refDims.width / refDims.height) > 1.5f;
+    // Earlier iPhone sensors are physically sideways-mounted, even if their
+    // *output* / calibration dimensions happen to be 16:9. In 2026 the
+    // original aspect-ratio heuristic could select the wrong orientation on
+    // iPhone 13 and rotate the resulting point cloud by 90 degrees.
+    //
+    // Legacy mapping: swap X/Y and invert Z.
+    // Portrait-mounted mapping: keep X, invert Y/Z.
+    const bool portraitMounted = UsePortraitFrontSensorMapping();
 
-    math::Mat3x4 desiredOrientation = isWidescreenSensor
+    static dispatch_once_t orientationLogOnce;
+    dispatch_once(&orientationLogOnce, ^{
+        CGSize dims = calibrationData.intrinsicMatrixReferenceDimensions;
+        NSLog(@"[StandardCyborgFusion] TrueDepth sensor layout: %@, intrinsics reference: %.0fx%.0f",
+              portraitMounted ? @"portrait-mounted" : @"sideways-mounted", dims.width, dims.height);
+    });
+
+    math::Mat3x4 desiredOrientation = portraitMounted
         ? math::Mat3x4({
             1, 0, 0, 0,
             0, -1, 0, 0,
