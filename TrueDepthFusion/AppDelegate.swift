@@ -15,7 +15,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UserDefaults.standard.register(defaults: [
             "tap_to_start_stop": true,
-            "full_resolution_depth_frames": true,
+            "full_resolution_depth_frames": false,
             "stop_scanning_on_reconstruction_failure": true
         ])
         reloadScans()

@@ -360,7 +360,7 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     }
     
     private var _useFullResolutionDepthFrames: Bool {
-        get { return UserDefaults.standard.bool(forKey: "full_resolution_depth_frames", defaultValue: true) }
+        get { return UserDefaults.standard.bool(forKey: "full_resolution_depth_frames", defaultValue: false) }
         set { UserDefaults.standard.set(newValue, forKey: "full_resolution_depth_frames") }
     }
     

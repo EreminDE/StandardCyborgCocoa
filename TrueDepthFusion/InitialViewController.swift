@@ -94,7 +94,7 @@ class InitialViewController: UIViewController {
 private class ScannerSettingsController: UITableViewController {
     private let options: [(title: String, key: String, fallback: Bool)] = [
         ("Ручной старт и стоп", "tap_to_start_stop", true),
-        ("Полное разрешение глубины", "full_resolution_depth_frames", true),
+        ("Полное разрешение глубины", "full_resolution_depth_frames", false),
         ("Завершать при потере трекинга", "stop_scanning_on_reconstruction_failure", true)
     ]
 
@@ -126,7 +126,7 @@ private class ScannerSettingsController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        "Ручной режим запускает скан сразу и работает до повторного нажатия. Если его выключить, включаются обратный отсчёт и таймер.\n\nПолное разрешение увеличивает детализацию и нагрузку. При потере трекинга по умолчанию сохраняется набранная геометрия; автоматическое восстановление пока не реализовано."
+        "Ручной режим запускает скан сразу и работает до повторного нажатия. Если его выключить, включаются обратный отсчёт и таймер.\n\nПолное разрешение увеличивает плотность точек и нагрузку, но не гарантирует большей точности. Для сравнения с оригиналом оставьте его выключенным. При потере трекинга по умолчанию сохраняется набранная геометрия; автоматическое восстановление пока не реализовано."
     }
 
     @objc private func changed(_ sender: UISwitch) {

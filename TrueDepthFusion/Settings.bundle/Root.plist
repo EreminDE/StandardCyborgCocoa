@@ -24,7 +24,7 @@
 			<key>Key</key>
 			<string>full_resolution_depth_frames</string>
 			<key>DefaultValue</key>
-			<true/>
+			<false/>
 		</dict>
 		<dict>
 			<key>Type</key>
