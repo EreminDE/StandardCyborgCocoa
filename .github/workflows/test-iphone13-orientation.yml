@@ -48,6 +48,7 @@ jobs:
           test -f "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.ereminde.sc.orientation.example" "$APP/Info.plist"
           echo "App identifier: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
+          python3 scripts/dedupe_ios_resources.py "$APP"
           mkdir -p orientation-example/Payload
           cp -R "$APP" orientation-example/Payload/
           (cd orientation-example && zip -qr StandardCyborgExample-OrientationTest.ipa Payload)
@@ -78,6 +79,7 @@ jobs:
           test -f "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.ereminde.sc.orientation.full" "$APP/Info.plist"
           echo "App identifier: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
+          python3 scripts/dedupe_ios_resources.py "$APP"
           mkdir -p orientation-full/Payload
           cp -R "$APP" orientation-full/Payload/
           (cd orientation-full && zip -qr TrueDepthFusion-OrientationTest.ipa Payload)
