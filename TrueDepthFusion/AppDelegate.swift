@@ -13,6 +13,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 	var window: UIWindow?
     
     func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UserDefaults.standard.register(defaults: [
+            "tap_to_start_stop": true,
+            "full_resolution_depth_frames": true,
+            "stop_scanning_on_reconstruction_failure": true
+        ])
         reloadScans()
         
         return true
@@ -34,26 +39,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 .sorted { $0.dateCreated.compare($1.dateCreated) == .orderedDescending }
     }
     
-    func add(_ scan: Scan) {
+    @discardableResult
+    func add(_ scan: Scan) -> Bool {
         if scan.plyPath == nil {
             do {
                 try scan.write(toContainerPath: _scansContainerURL.path)
                 scans.insert(scan, at: 0)
             } catch {
                 print("Error saving scan: \(error)")
+                return false
             }
         }
+        return true
     }
     
-    func remove(_ scan: Scan) {
+    @discardableResult
+    func remove(_ scan: Scan) -> Bool {
         if let index = scans.firstIndex(of: scan) {
             do {
                 try scan.deleteFiles()
                 scans.remove(at: index)
             } catch {
                 print("Error deleting files: \(error)")
+                return false
             }
         }
+        return true
     }
     
     func createBPLYScanDirectory() -> String {

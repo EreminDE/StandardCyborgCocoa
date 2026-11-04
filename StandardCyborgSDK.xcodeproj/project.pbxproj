@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A11400010000000000000001 /* STLWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11400010000000000000002 /* STLWriter.swift */; };
 		0738A79C22935E7800F33186 /* ScenekitTestbedViewController.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0738A79922935E7800F33186 /* ScenekitTestbedViewController.storyboard */; };
 		0738A79D22935E7800F33186 /* ScenekitTestbedViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0738A79B22935E7800F33186 /* ScenekitTestbedViewController.mm */; };
 		760D410B214332D300AB99FA /* CameraControl.m in Sources */ = {isa = PBXBuildFile; fileRef = 760D410A214332D300AB99FA /* CameraControl.m */; };
@@ -125,6 +126,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A11400010000000000000002 /* STLWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = STLWriter.swift; sourceTree = "<group>"; };
 		07317DCD240F0090006EAB2B /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		07317DCF240F0096006EAB2B /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		07317DD1240F009C006EAB2B /* OpenCL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenCL.framework; path = System/Library/Frameworks/OpenCL.framework; sourceTree = SDKROOT; };
@@ -379,6 +381,7 @@
 				7693C45421587E30005A4772 /* ScanningViewRendering */,
 				768F650A21215B3C00C1B1DA /* AppDelegate.swift */,
 				76871D022193AB9D00C1ABA0 /* InitialViewController.swift */,
+				A11400010000000000000002 /* STLWriter.swift */,
 				768F65042121591F00C1B1DA /* ScanningViewController.swift */,
 				76857187222CCB4000066B6E /* BPLYScanningViewController.swift */,
 				768F650621215A6000C1B1DA /* ScanPreviewViewController.scn */,
@@ -699,6 +702,7 @@
 				76999472215C9FF0007CF275 /* PaddedLabel.swift in Sources */,
 				76385562212F390500C7DA06 /* DepthColoringFilter.swift in Sources */,
 				76871D032193AB9D00C1ABA0 /* InitialViewController.swift in Sources */,
+				A11400010000000000000001 /* STLWriter.swift in Sources */,
 				768F650E21215BD500C1B1DA /* Scan.mm in Sources */,
 				768F650B21215B3C00C1B1DA /* AppDelegate.swift in Sources */,
 			);

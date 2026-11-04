@@ -70,44 +70,43 @@
 
 - (BOOL)writeToContainerPath:(NSString *)containerPath error:(NSError **)errorOut
 {
-    BOOL success = YES;
-    NSString *plyFilename = [NSString stringWithFormat:@"Scan-%@.ply", [Scan stringFromDate:_dateCreated]];
+    // A unique suffix prevents two quick scans from overwriting each other.
+    NSString *plyFilename = [NSString stringWithFormat:@"Scan-%@-%@.ply", [Scan stringFromDate:_dateCreated], NSUUID.UUID.UUIDString];
     NSString *plyPath = [containerPath stringByAppendingPathComponent:plyFilename];
-    NSString *jpegPath = [[self class] _thumbnailPathForPLYPath:plyPath];
-    
-    NSError *jpegError = nil;
-    @autoreleasepool {
-        NSData *jpegData = UIImageJPEGRepresentation(_thumbnail, 0.8);
-        success = [jpegData writeToFile:jpegPath options:NSDataWritingAtomic error:&jpegError];
+    NSString *temporaryPath = [containerPath stringByAppendingPathComponent:[NSString stringWithFormat:@".%@.ply", NSUUID.UUID.UUIDString]];
+    if (![[self pointCloud] writeToPLYAtPath:temporaryPath]) {
+        [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:NULL];
+        if (errorOut != NULL) {
+            *errorOut = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileWriteUnknownError
+                                       userInfo:@{NSLocalizedDescriptionKey: @"Не удалось записать облако точек."}];
+        }
+        return NO;
     }
-    
-    if (success) {
-        success = [_pointCloud writeToPLYAtPath:plyPath];
+    if (![[NSFileManager defaultManager] moveItemAtPath:temporaryPath toPath:plyPath error:errorOut]) {
+        [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:NULL];
+        return NO;
     }
-    
-    if (!success && errorOut != NULL) {
-        *errorOut = [NSError errorWithDomain:NSCocoaErrorDomain code:0
-                                    userInfo:@{ NSLocalizedDescriptionKey : plyPath }];
+    _plyPath = plyPath;
+    // A missing thumbnail must not discard successfully saved geometry.
+    if (_thumbnail != nil) {
+        [UIImageJPEGRepresentation(_thumbnail, 0.8) writeToFile:[[self class] _thumbnailPathForPLYPath:plyPath]
+                                                     options:NSDataWritingAtomic error:NULL];
     }
-    
-    if (success) {
-        _plyPath = plyPath;
-    }
-    
-    return success;
+    return YES;
 }
 
 - (BOOL)deleteFilesWithError:(NSError **)errorOut
 {
-    BOOL success = YES;
-    
     if (_plyPath != nil) {
-        NSString *thumbnailPath = [[self class] _thumbnailPathForPLYPath:_plyPath];
-        success = success && [[NSFileManager defaultManager] removeItemAtPath:_plyPath error:errorOut];
-        success = success && [[NSFileManager defaultManager] removeItemAtPath:thumbnailPath error:errorOut];
+        NSFileManager *manager = [NSFileManager defaultManager];
+        // Check existence so a retry can finish a partially completed deletion.
+        for (NSString *path in @[_plyPath, [[self class] _thumbnailPathForPLYPath:_plyPath]]) {
+            if ([manager fileExistsAtPath:path] && ![manager removeItemAtPath:path error:errorOut]) {
+                return NO;
+            }
+        }
     }
-    
-    return success;
+    return YES;
 }
 
 - (SCPointCloud *)pointCloud

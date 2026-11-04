@@ -10,27 +10,27 @@
 			<key>Type</key>
 			<string>PSToggleSwitchSpecifier</string>
 			<key>Title</key>
-			<string>Tap to start/stop</string>
+			<string>Ручной старт и стоп</string>
 			<key>Key</key>
 			<string>tap_to_start_stop</string>
 			<key>DefaultValue</key>
-			<false/>
+			<true/>
 		</dict>
 		<dict>
 			<key>Type</key>
 			<string>PSToggleSwitchSpecifier</string>
 			<key>Title</key>
-			<string>Full resolution depth frames</string>
+			<string>Полное разрешение глубины</string>
 			<key>Key</key>
 			<string>full_resolution_depth_frames</string>
 			<key>DefaultValue</key>
-			<false/>
+			<true/>
 		</dict>
 		<dict>
 			<key>Type</key>
 			<string>PSToggleSwitchSpecifier</string>
 			<key>Title</key>
-			<string>Dump raw frames to Binary PLY</string>
+			<string>Записывать исходные кадры Binary PLY</string>
 			<key>Key</key>
 			<string>dump_raw_frames_to_bply</string>
 			<key>DefaultValue</key>
@@ -40,7 +40,7 @@
 			<key>Type</key>
 			<string>PSToggleSwitchSpecifier</string>
 			<key>Title</key>
-			<string>Stop scanning on reconstruction failure</string>
+			<string>Завершать при потере трекинга</string>
 			<key>Key</key>
 			<string>stop_scanning_on_reconstruction_failure</string>
 			<key>DefaultValue</key>
@@ -50,7 +50,7 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>ICP max iteration count</string>
+			<string>Максимум итераций ICP</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -70,7 +70,7 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>ICP tolerance</string>
+			<string>Допуск ICP</string>
 		</dict>
 		<dict>
 			<key>Type</key>

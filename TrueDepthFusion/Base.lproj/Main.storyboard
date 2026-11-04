@@ -11,7 +11,7 @@
         <!--Initial-->
         <scene sceneID="NSM-Ze-h3Z">
             <objects>
-                <viewController title="Home" id="d18-9B-5GY" userLabel="Initial" customClass="InitialViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController title="Главная" id="d18-9B-5GY" userLabel="Initial" customClass="InitialViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="bhg-ug-afR">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -45,7 +45,7 @@
                                                 <color key="backgroundColor" red="0.14117647059999999" green="0.52941176469999995" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                                 <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="21"/>
                                                 <inset key="contentEdgeInsets" minX="0.0" minY="12" maxX="0.0" maxY="12"/>
-                                                <state key="normal" title="SCAN">
+                                                <state key="normal" title="Новый скан">
                                                     <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 </state>
                                                 <userDefinedRuntimeAttributes>
@@ -60,7 +60,7 @@
                                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ok9-gs-oV1">
                                                 <rect key="frame" x="101" y="411" width="112" height="38"/>
                                                 <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="21"/>
-                                                <state key="normal" title="View Scans"/>
+                                                <state key="normal" title="Библиотека сканов"/>
                                                 <connections>
                                                     <segue destination="m1K-Dn-evK" kind="show" id="tVo-JF-wmq"/>
                                                 </connections>
@@ -106,7 +106,7 @@
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="QxL-Yf-Kqx"/>
                     </view>
-                    <navigationItem key="navigationItem" title="Home" id="mWi-X6-7AU"/>
+                    <navigationItem key="navigationItem" title="Главная" id="mWi-X6-7AU"/>
                     <connections>
                         <outlet property="introLabel" destination="COD-9v-apx" id="c2w-w3-UD8"/>
                         <segue destination="RyE-1f-wRL" kind="presentation" identifier="ScanningViewController" id="vZh-bL-Dkg"/>
@@ -120,7 +120,7 @@
         <!--Scanning-->
         <scene sceneID="dFW-IC-xb1">
             <objects>
-                <viewController storyboardIdentifier="ScanningViewController" title="Scan" modalPresentationStyle="fullScreen" id="RyE-1f-wRL" userLabel="Scanning" customClass="ScanningViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="ScanningViewController" title="Скан" modalPresentationStyle="fullScreen" id="RyE-1f-wRL" userLabel="Scanning" customClass="ScanningViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="aAn-Ox-npb">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
@@ -181,7 +181,7 @@
                                             </label>
                                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="hZM-wD-uoV">
                                                 <rect key="frame" x="318" y="21" width="37" height="30"/>
-                                                <state key="normal" title="Done"/>
+                                                <state key="normal" title="Готово"/>
                                                 <connections>
                                                     <action selector="done:" destination="RyE-1f-wRL" eventType="touchUpInside" id="cew-Qs-aEW"/>
                                                 </connections>
@@ -351,7 +351,7 @@ Cg
         <!--Scan Preview-->
         <scene sceneID="5vk-wV-z3C">
             <objects>
-                <viewController storyboardIdentifier="ScanPreviewViewController" title="Scan" modalPresentationStyle="fullScreen" id="L0a-pL-1bz" userLabel="Scan Preview" customClass="ScanPreviewViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="ScanPreviewViewController" title="Скан" modalPresentationStyle="fullScreen" id="L0a-pL-1bz" userLabel="Scan Preview" customClass="ScanPreviewViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="6g1-qg-Egv">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -365,7 +365,7 @@ Cg
                                 <color key="backgroundColor" red="0.98039215690000003" green="0.27058823529999998" blue="0.27058823529999998" alpha="1" colorSpace="calibratedRGB"/>
                                 <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="21"/>
                                 <inset key="contentEdgeInsets" minX="0.0" minY="12" maxX="0.0" maxY="12"/>
-                                <state key="normal" title="DELETE">
+                                <state key="normal" title="Удалить">
                                     <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 </state>
                                 <userDefinedRuntimeAttributes>
@@ -382,7 +382,7 @@ Cg
                                 <color key="backgroundColor" red="0.13725490200000001" green="0.53333333329999999" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                                 <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="21"/>
                                 <inset key="contentEdgeInsets" minX="0.0" minY="12" maxX="0.0" maxY="12"/>
-                                <state key="normal" title="DONE">
+                                <state key="normal" title="Сохранить">
                                     <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 </state>
                                 <userDefinedRuntimeAttributes>
@@ -403,7 +403,7 @@ Cg
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="XvG-xA-ZpF" userLabel="Mesh Button">
                                 <rect key="frame" x="20" y="42.666666666666664" width="38" height="29.999999999999993"/>
-                                <state key="normal" title="Mesh"/>
+                                <state key="normal" title="Поверхность"/>
                                 <connections>
                                     <action selector="_runMeshing:" destination="L0a-pL-1bz" eventType="touchUpInside" id="wtc-Ch-mAh"/>
                                 </connections>
@@ -414,7 +414,7 @@ Cg
                                     <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Byh-eB-DdU" userLabel="Meshing View">
                                         <rect key="frame" x="60" y="339.66666666666669" width="255" height="133"/>
                                         <subviews>
-                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Meshing…" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ceY-J5-Ugd">
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Построение поверхности…" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ceY-J5-Ugd">
                                                 <rect key="frame" x="20" y="20" width="215" height="21"/>
                                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                 <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
@@ -425,7 +425,7 @@ Cg
                                             </progressView>
                                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="GMh-uY-i5B">
                                                 <rect key="frame" x="103.66666666666666" y="83" width="48" height="30"/>
-                                                <state key="normal" title="Cancel"/>
+                                                <state key="normal" title="Отмена"/>
                                                 <connections>
                                                     <action selector="cancelMeshing:" destination="L0a-pL-1bz" eventType="touchUpInside" id="zeb-OU-rH2"/>
                                                 </connections>
@@ -496,7 +496,7 @@ Cg
         <!--Scans-->
         <scene sceneID="PXS-s1-FEc">
             <objects>
-                <tableViewController storyboardIdentifier="ScansViewController" title="Scans" id="m1K-Dn-evK" customClass="ScansViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
+                <tableViewController storyboardIdentifier="ScansViewController" title="Сканы" id="m1K-Dn-evK" customClass="ScansViewController" customModule="TrueDepthFusion" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="100" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" id="9KR-pU-tDg">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -645,7 +645,7 @@ Cg
                                             </label>
                                             <button opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Thg-yv-vhv">
                                                 <rect key="frame" x="318" y="21" width="37" height="30"/>
-                                                <state key="normal" title="Done"/>
+                                                <state key="normal" title="Готово"/>
                                                 <connections>
                                                     <action selector="done:" destination="AUl-IV-Dey" eventType="touchUpInside" id="U82-jf-0Oy"/>
                                                 </connections>
