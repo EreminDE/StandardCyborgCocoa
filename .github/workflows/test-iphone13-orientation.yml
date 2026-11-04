@@ -1,0 +1,88 @@
+name: Test iPhone 13 TrueDepth orientation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/truedepth-orientation-iphone13
+    paths:
+      - '.github/workflows/test-iphone13-orientation.yml'
+      - 'StandardCyborgFusion/Sources/StandardCyborgFusion/Helpers/PerspectiveCamera+AVFoundation.mm'
+
+jobs:
+  build-orientation-test:
+    runs-on: macos-15-intel
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Build StandardCyborgExample
+        run: |
+          xcodebuild \
+            -project StandardCyborgExample/StandardCyborgExample.xcodeproj \
+            -scheme StandardCyborgExample \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-example \
+            PRODUCT_BUNDLE_IDENTIFIER=com.ereminde.sc.orientation.example \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package StandardCyborgExample IPA
+        run: |
+          APP="build-example/Build/Products/Release-iphoneos/StandardCyborgExample.app"
+          PKG="build-example/Build/Products/Release-iphoneos/PackageFrameworks"
+          for NAME in StandardCyborgUI StandardCyborgFusion; do
+            DEST="$APP/Frameworks/$NAME.framework"
+            if [ ! -f "$DEST/$NAME" ]; then
+              test -d "$PKG/$NAME.framework"
+              mkdir -p "$APP/Frameworks"
+              cp -R "$PKG/$NAME.framework" "$DEST"
+            fi
+            test -f "$DEST/$NAME"
+          done
+          mkdir -p orientation-example/Payload
+          cp -R "$APP" orientation-example/Payload/
+          (cd orientation-example && zip -qr StandardCyborgExample-OrientationTest.ipa Payload)
+
+      - name: Build TrueDepthFusion
+        run: |
+          xcodebuild \
+            -project StandardCyborgSDK.xcodeproj \
+            -scheme TrueDepthFusion \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-full \
+            PRODUCT_BUNDLE_IDENTIFIER=com.ereminde.sc.orientation.full \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package TrueDepthFusion IPA
+        run: |
+          APP="build-full/Build/Products/Release-iphoneos/TrueDepthFusion.app"
+          PKG="build-full/Build/Products/Release-iphoneos/PackageFrameworks"
+          DEST="$APP/Frameworks/StandardCyborgFusion.framework"
+          if [ ! -f "$DEST/StandardCyborgFusion" ]; then
+            test -d "$PKG/StandardCyborgFusion.framework"
+            mkdir -p "$APP/Frameworks"
+            cp -R "$PKG/StandardCyborgFusion.framework" "$DEST"
+          fi
+          test -f "$DEST/StandardCyborgFusion"
+          mkdir -p orientation-full/Payload
+          cp -R "$APP" orientation-full/Payload/
+          (cd orientation-full && zip -qr TrueDepthFusion-OrientationTest.ipa Payload)
+
+      - name: Upload orientation test IPAs
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone13-orientation-test-ipas
+          path: |
+            orientation-example/StandardCyborgExample-OrientationTest.ipa
+            orientation-full/TrueDepthFusion-OrientationTest.ipa
+          if-no-files-found: error
