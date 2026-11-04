@@ -29,7 +29,6 @@ jobs:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build-example \
-            PRODUCT_BUNDLE_IDENTIFIER=com.ereminde.sc.orientation.example \
             CODE_SIGNING_ALLOWED=NO \
             build
 
@@ -46,6 +45,9 @@ jobs:
             fi
             test -f "$DEST/$NAME"
           done
+          test -f "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.ereminde.sc.orientation.example" "$APP/Info.plist"
+          echo "App identifier: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
           mkdir -p orientation-example/Payload
           cp -R "$APP" orientation-example/Payload/
           (cd orientation-example && zip -qr StandardCyborgExample-OrientationTest.ipa Payload)
@@ -59,7 +61,6 @@ jobs:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build-full \
-            PRODUCT_BUNDLE_IDENTIFIER=com.ereminde.sc.orientation.full \
             CODE_SIGNING_ALLOWED=NO \
             build
 
@@ -74,9 +75,43 @@ jobs:
             cp -R "$PKG/StandardCyborgFusion.framework" "$DEST"
           fi
           test -f "$DEST/StandardCyborgFusion"
+          test -f "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.ereminde.sc.orientation.full" "$APP/Info.plist"
+          echo "App identifier: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
           mkdir -p orientation-full/Payload
           cp -R "$APP" orientation-full/Payload/
           (cd orientation-full && zip -qr TrueDepthFusion-OrientationTest.ipa Payload)
+
+      - name: Validate unique bundle identifiers in both IPAs
+        run: |
+          python3 - <<'PY'
+          import plistlib
+          import zipfile
+          from pathlib import PurePosixPath
+
+          archives = {
+              "orientation-example/StandardCyborgExample-OrientationTest.ipa": "com.ereminde.sc.orientation.example",
+              "orientation-full/TrueDepthFusion-OrientationTest.ipa": "com.ereminde.sc.orientation.full",
+          }
+          for filename, expected_app_id in archives.items():
+              found = {}
+              with zipfile.ZipFile(filename) as zf:
+                  for member in zf.namelist():
+                      if not member.startswith("Payload/") or not member.endswith("/Info.plist"):
+                          continue
+                      info = plistlib.loads(zf.read(member))
+                      bundle_id = info.get("CFBundleIdentifier")
+                      if not bundle_id:
+                          continue
+                      if bundle_id in found:
+                          raise RuntimeError(
+                              f"Duplicate Bundle ID {bundle_id}: {found[bundle_id]} and {member} in {filename}"
+                          )
+                      found[bundle_id] = member
+                  if expected_app_id not in found:
+                      raise RuntimeError(f"Top-level app Bundle ID {expected_app_id} not found in {filename}")
+              print(f"{filename}: {len(found)} unique bundle identifiers")
+          PY
 
       - name: Upload orientation test IPAs
         uses: actions/upload-artifact@v4
