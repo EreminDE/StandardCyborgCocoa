@@ -24,6 +24,7 @@ class ScanPreviewViewController: UIViewController {
     private var _mesh: SCMesh?
     private var _meshingOperation: SCMeshingOperation?
     private var _working = false
+    private var _cancelMeshingRequested = false
     private var _initialPointOfView = SCNMatrix4Identity
     private var _pointCloudNode: SCNNode? {
         willSet { _pointCloudNode?.removeFromParentNode() }
@@ -142,6 +143,7 @@ class ScanPreviewViewController: UIViewController {
     private func buildMesh(completion: (() -> Void)?) {
         guard !_working, let scan = scan else { return }
         _working = true
+        _cancelMeshingRequested = false
         meshButton.isEnabled = false
         meshingProgressContainer.isHidden = false
         meshingProgressContainer.alpha = 1
@@ -158,7 +160,10 @@ class ScanPreviewViewController: UIViewController {
                 operation.progressHandler = { progress in
                     DispatchQueue.main.async { self.meshingProgressView.progress = progress }
                 }
-                DispatchQueue.main.async { self._meshingOperation = operation }
+                DispatchQueue.main.sync {
+                    self._meshingOperation = operation
+                    if self._cancelMeshingRequested { operation.cancel() }
+                }
                 operation.start()
                 if operation.isCancelled {
                     DispatchQueue.main.async { self.finishMeshing() }
@@ -192,5 +197,8 @@ class ScanPreviewViewController: UIViewController {
         meshingProgressContainer.isHidden = true
     }
 
-    @IBAction private func cancelMeshing(_ sender: Any) { _meshingOperation?.cancel() }
+    @IBAction private func cancelMeshing(_ sender: Any) {
+        _cancelMeshingRequested = true
+        _meshingOperation?.cancel()
+    }
 }

@@ -113,7 +113,8 @@ class ScansViewController: UITableViewController {
     
     private lazy var _scanPreviewViewController: ScanPreviewViewController = {
         let scanVC = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "ScanPreviewViewController") as! ScanPreviewViewController
-        scanVC.deletionHandler = { [unowned self, scanVC] in
+        scanVC.deletionHandler = { [weak self, weak scanVC] in
+            guard let self = self, let scanVC = scanVC else { return }
             guard self._appDelegate.remove(scanVC.scan!) else {
                 scanVC.showFileError("Не удалось удалить скан. Повторите попытку.")
                 return

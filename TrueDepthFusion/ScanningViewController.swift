@@ -27,7 +27,7 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     }
     
     @IBAction private func shutterTapped(_ sender: UIButton?) {
-        guard !_finalizing && _cameraReady else { return }
+        guard !_finalizing && !_pendingPreview && _cameraReady else { return }
         if _scanning {
             _stopScanning(reason: .finished)
         } else if _countdownSeconds > 0 {
@@ -242,7 +242,9 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
             let alertController = UIAlertController(title: "iPhone перегрелся",
                                                     message: "Дайте телефону остыть перед следующим сканированием.",
                                                     preferredStyle: .alert)
-            alertController.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
+            alertController.addAction(UIAlertAction(title: "Понятно", style: .cancel) { [weak self] _ in
+                self?.dismiss(animated: true) { self?._presentPendingPreview() }
+            })
             self.present(alertController, animated: true, completion: nil)
         }
     }
@@ -307,9 +309,8 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         }
         
         if _stopScanOnReconFail && metadata.result == .failed {
-            let assimilatedTooFewFrames = statistics.succeededCount < self._failedScanShowPreviewMinFrameCount
-            
-            self._stopScanning(reason: assimilatedTooFewFrames ? .canceled : .finished)
+            // Preserve any captured geometry for review; an empty result is rejected after finalization.
+            self._stopScanning(reason: .finished)
             
             self._showScanFailedMessage()
         }
@@ -324,7 +325,8 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     private lazy var _scanPreviewViewController: ScanPreviewViewController = {
         let scanVC = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "ScanPreviewViewController") as! ScanPreviewViewController
         
-        scanVC.deletionHandler = { [unowned self] in
+        scanVC.deletionHandler = { [weak self, weak scanVC] in
+            guard let self = self, let scanVC = scanVC else { return }
             if scanVC.scan!.plyPath != nil {
                 guard self._appDelegate.remove(scanVC.scan!) else {
                     scanVC.showFileError("Не удалось удалить скан.")
@@ -334,7 +336,8 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
             self.dismiss(animated: true, completion: nil)
         }
         
-        scanVC.doneHandler = { [unowned self, scanVC] in
+        scanVC.doneHandler = { [weak self, weak scanVC] in
+            guard let self = self, let scanVC = scanVC else { return }
             // Save the scan
             if scanVC.scan!.plyPath == nil {
                 guard self._appDelegate.add(scanVC.scan!) else {
@@ -424,8 +427,6 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
             }
         })
     }
-    
-    private let _failedScanShowPreviewMinFrameCount = 50
     
     private lazy var _maxReconstructionThreadCount: Int32 = {
         return UIDevice.current.userInterfaceIdiom == .pad ? 4 : 2
