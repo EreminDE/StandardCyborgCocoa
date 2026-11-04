@@ -1,0 +1,63 @@
+name: Build Limb Scanner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/limb-scanner-foundation]
+
+jobs:
+  build:
+    runs-on: macos-15-intel
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+      - name: Verify STL units and geometry handling
+        run: |
+          mkdir -p build-tests
+          xcrun swiftc TrueDepthFusion/STLWriter.swift Tests/STLWriter/main.swift -o build-tests/stl-tests
+          build-tests/stl-tests
+      - name: Build iPhone application
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project StandardCyborgSDK.xcodeproj \
+            -scheme TrueDepthFusion \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-limb \
+            CODE_SIGNING_ALLOWED=NO build | tee build-limb.log
+      - name: Package and validate IPA
+        run: |
+          APP="build-limb/Build/Products/Release-iphoneos/TrueDepthFusion.app"
+          PKG="build-limb/Build/Products/Release-iphoneos/PackageFrameworks"
+          DEST="$APP/Frameworks/StandardCyborgFusion.framework"
+          if [ ! -f "$DEST/StandardCyborgFusion" ]; then
+            test -d "$PKG/StandardCyborgFusion.framework"
+            mkdir -p "$APP/Frameworks"
+            cp -R "$PKG/StandardCyborgFusion.framework" "$DEST"
+          fi
+          test -f "$APP/TrueDepthFusion"
+          test -f "$DEST/StandardCyborgFusion"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.ereminde.limbscanner.dev' "$APP/Info.plist"
+          python3 scripts/dedupe_ios_resources.py "$APP"
+          python3 scripts/validate_ios_bundle_ids.py "$APP"
+          mkdir -p limb-scanner/Payload
+          cp -R "$APP" limb-scanner/Payload/
+          (cd limb-scanner && zip -qr LimbScanner.ipa Payload)
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: LimbScanner-iPhone
+          path: limb-scanner/LimbScanner.ipa
+          if-no-files-found: error
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LimbScanner-build-log
+          path: build-limb.log
+          if-no-files-found: ignore

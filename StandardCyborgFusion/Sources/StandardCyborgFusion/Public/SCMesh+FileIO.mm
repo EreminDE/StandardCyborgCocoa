@@ -35,7 +35,33 @@ using namespace standard_cyborg;
                        JPEGPath:(NSString *)JPEGPath
 {
     sc3d::Geometry geometry;
-    io::ply::ReadGeometryFromPLYFile(geometry, [PLYPath UTF8String]);
+    if (!io::ply::ReadGeometryFromPLYFile(geometry, [PLYPath UTF8String]) ||
+        geometry.vertexCount() == 0 || geometry.faceCount() == 0) {
+        return nil;
+    }
+
+    // Geometric PLY files (including PoissonRecon output) need not contain UVs.
+    // Building a textured mesh would read a vertex-sized buffer from an empty UV array.
+    const auto& positions = geometry.getPositions();
+    std::vector<math::Vec3> normals(geometry.vertexCount(), math::Vec3{0, 0, 0});
+    for (const auto& face : geometry.getFaces()) {
+        for (int corner = 0; corner < 3; ++corner) {
+            if (face[corner] < 0 || face[corner] >= geometry.vertexCount()) { return nil; }
+        }
+        const auto u = positions[face[1]] - positions[face[0]];
+        const auto v = positions[face[2]] - positions[face[0]];
+        const math::Vec3 normal{u.y * v.z - u.z * v.y,
+                               u.z * v.x - u.x * v.z,
+                               u.x * v.y - u.y * v.x};
+        for (int corner = 0; corner < 3; ++corner) { normals[face[corner]] += normal; }
+    }
+    if (!geometry.hasNormals()) { geometry.setNormals(normals); }
+    if (!geometry.hasTexCoords()) {
+        if (!geometry.hasColors()) {
+            geometry.setColors(std::vector<math::Vec3>(geometry.vertexCount(), math::Vec3{0.7f, 0.7f, 0.7f}));
+        }
+        return [SCMesh meshWithVertexColorsFromGeometry:geometry];
+    }
     
     return [SCMesh meshFromGeometry:geometry
                     textureJPEGPath:JPEGPath];

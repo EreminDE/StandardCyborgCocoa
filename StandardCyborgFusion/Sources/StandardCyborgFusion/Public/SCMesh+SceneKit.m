@@ -85,7 +85,7 @@
 {
     // Dump the texture to a JPEG image
     // This is the asiest way to feed the texture to SceneKit
-    if (self.textureJPEGPath == nil) {
+    if (self.colorData == nil && self.textureJPEGPath == nil) {
         NSString *tempJPEGPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"temp-buildMeshNode.jpeg"];
         [self writeTextureToJPEGAtPath:tempJPEGPath];
         self.textureJPEGPath = tempJPEGPath;

@@ -12,7 +12,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface SCMesh (FileIO)
 
-- (instancetype)initWithPLYPath:(NSString *)PLYPath
+- (nullable instancetype)initWithPLYPath:(NSString *)PLYPath
                        JPEGPath:(NSString *)JPEGPath;
 
 - (BOOL)writeTextureToJPEGAtPath:(NSString *)JPEGPath;

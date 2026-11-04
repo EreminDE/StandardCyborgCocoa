@@ -16,7 +16,7 @@ class ScansViewController: UITableViewController {
         super.awakeFromNib()
         
         tableView.addSubview(_noScansLabel)
-        _noScansLabel.text = "No Scans"
+        _noScansLabel.text = "Пока нет сканов"
         _noScansLabel.textAlignment = NSTextAlignment.center
         _noScansLabel.textColor = UIColor.gray
         _noScansLabel.font = UIFont.systemFont(ofSize: 24, weight: UIFont.Weight.medium)
@@ -26,6 +26,7 @@ class ScansViewController: UITableViewController {
         super.viewWillAppear(animated)
         
         _scans = _appDelegate.scans
+        title = "Библиотека сканов"
         
         _updateNoScansLabel()
         tableView.reloadData()
@@ -70,24 +71,30 @@ class ScansViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        let delete = UIContextualAction(style: .destructive, title: "Delete") { action, view, completion in
-            self._deleteScan(at: indexPath)
-            completion(true)
+        let delete = UIContextualAction(style: .destructive, title: "Удалить") { action, view, completion in
+            completion(false)
+            let alert = UIAlertController(title: "Удалить скан?", message: "Это действие нельзя отменить.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Удалить", style: .destructive) { _ in self._deleteScan(at: indexPath) })
+            self.present(alert, animated: true)
         }
         
-        let export = UIContextualAction(style: .normal, title: "Export") { action, view, completion in
+        let export = UIContextualAction(style: .normal, title: "PLY") { action, view, completion in
             let scan = self._scans[indexPath.row]
             self._export(scan)
             completion(true)
         }
         
-        return UISwipeActionsConfiguration(actions: [delete, export])
+        let configuration = UISwipeActionsConfiguration(actions: [delete, export])
+        configuration.performsFirstActionWithFullSwipe = false
+        return configuration
     }
     
     // MARK: - Private
     
     private static let _dateFormatter: DateFormatter = {
         var formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ru_RU")
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter
@@ -106,8 +113,12 @@ class ScansViewController: UITableViewController {
     
     private lazy var _scanPreviewViewController: ScanPreviewViewController = {
         let scanVC = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "ScanPreviewViewController") as! ScanPreviewViewController
-        scanVC.deletionHandler = { [unowned self, scanVC] in
-            self._appDelegate.remove(scanVC.scan!)
+        scanVC.deletionHandler = { [weak self, weak scanVC] in
+            guard let self = self, let scanVC = scanVC else { return }
+            guard self._appDelegate.remove(scanVC.scan!) else {
+                scanVC.showFileError("Не удалось удалить скан. Повторите попытку.")
+                return
+            }
             self.dismiss(animated: true, completion: nil)
         }
         scanVC.doneHandler = { [unowned self] in
@@ -133,7 +144,12 @@ class ScansViewController: UITableViewController {
     private func _deleteScan(at indexPath: IndexPath) {
         let scan = _scans[indexPath.row]
         
-         _appDelegate.remove(scan)
+        guard _appDelegate.remove(scan) else {
+            let alert = UIAlertController(title: "Не удалось удалить скан", message: "Повторите попытку.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Понятно", style: .cancel))
+            present(alert, animated: true)
+            return
+        }
         
         tableView.beginUpdates()
         tableView.deleteRows(at: [indexPath], with: .automatic)

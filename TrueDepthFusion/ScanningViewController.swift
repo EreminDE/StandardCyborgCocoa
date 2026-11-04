@@ -27,24 +27,31 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     }
     
     @IBAction private func shutterTapped(_ sender: UIButton?) {
+        guard !_finalizing && !_pendingPreview && _cameraReady else { return }
         if _scanning {
-            AudioAndHapticEngine.shared.scanningFinished()
             _stopScanning(reason: .finished)
         } else if _countdownSeconds > 0 {
             AudioAndHapticEngine.shared.scanningCanceled()
             _cancelCountdown()
+        } else if _tapToStartStop {
+            _startScanning()
         } else {
             _startCountdown { self._startScanning() }
         }
     }
     
     @IBAction private func done(_ sender: UIButton) {
-        _stopScanning(reason: .finished)
-        
-        presentingViewController?.dismiss(animated: true, completion: nil)
+        guard !_finalizing else { return }
+        if _scanning {
+            _stopScanning(reason: .finished)
+        } else {
+            _cancelCountdown()
+            dismiss(animated: true)
+        }
     }
     
     @IBAction private func showLatestScan(_ sender: UIButton) {
+        guard !_scanning && !_finalizing else { return }
         guard let scan = _appDelegate.scans.first else { return }
         
         _scanPreviewViewController.scan = scan
@@ -62,6 +69,10 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     
     private var _latestViewMatrix = matrix_identity_float4x4
     private var _scanningTimer: Timer?
+    private var _cameraReady = false
+    private var _finalizing = false
+    private var _pendingPreview = false
+    private var _previousIdleTimerDisabled = false
     
     private let _meshTexturing = SCMeshTexturing()
     private var _frameIndex = 0
@@ -98,9 +109,17 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         _visualizationCommandQueue.label = "ScanningViewController._visualizationCommandQueue"
         
         _installVolumeShutterButton()
+        scanFailedLabel.attributedText = nil
+        scanFailedLabel.text = "Трекинг потерян.\nПеремещайте iPhone медленнее."
+        showScansButton.accessibilityLabel = "Последний скан"
+        _updateUI()
         
         NotificationCenter.default.addObserver(self, selector: #selector(_thermalStateChanged(notification:)),
                                                name: ProcessInfo.thermalStateDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(_applicationWillResignActive),
+                                               name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(_applicationDidBecomeActive),
+                                               name: UIApplication.didBecomeActiveNotification, object: nil)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -109,21 +128,26 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         let latestScan = _appDelegate.scans.first
         showScansButton.setBackgroundImage(latestScan?.thumbnail, for: UIControl.State.normal)
         scanDurationContainerView.isHidden = _tapToStartStop
+        _cameraReady = false
+        _updateUI()
         
         _cameraManager.startSession { result in
             switch result {
             case .success:
-                break
+                self._cameraReady = true
+                self._updateUI()
             case .configurationFailed:
-                print("Configuration failed for an unknown reason")
+                let alert = UIAlertController(title: "Камера недоступна", message: "Не удалось запустить TrueDepth. Закройте другие приложения с камерой и попробуйте снова.", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "Закрыть", style: .cancel) { _ in self.dismiss(animated: true) })
+                self.present(alert, animated: true)
             case .notAuthorized:
-                let message = NSLocalizedString("TrueDepth Fusion doesn't have permission to use the camera, please change privacy settings",
+                let message = NSLocalizedString("Разрешите доступ к камере в настройках iPhone для 3D-сканирования.",
                                                 comment: "Alert message when the user has denied access to the camera")
                 let alertController = UIAlertController(title: "TrueDepth Fusion", message: message, preferredStyle: .alert)
-                alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"),
+                alertController.addAction(UIAlertAction(title: NSLocalizedString("Закрыть", comment: "Alert OK button"),
                                                         style: .cancel,
-                                                        handler: nil))
-                alertController.addAction(UIAlertAction(title: NSLocalizedString("Settings", comment: "Alert button to open Settings"),
+                                                        handler: { _ in self.dismiss(animated: true) }))
+                alertController.addAction(UIAlertAction(title: NSLocalizedString("Настройки", comment: "Alert button to open Settings"),
                                                         style: .`default`)
                 { _ in
                     UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!, options: convertToUIApplicationOpenExternalURLOptionsKeyDictionary([:]), completionHandler: nil)
@@ -148,7 +172,9 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         super.viewDidAppear(animated)
         
         // Prevents auto screen dimming while the app is foreground
+        _previousIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
+        _presentPendingPreview()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -157,7 +183,9 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         _cameraManager.stopSession()
         _motionManager.stopDeviceMotionUpdates()
         
-        UIApplication.shared.isIdleTimerDisabled = true
+        _cameraReady = false
+        _cancelCountdown()
+        UIApplication.shared.isIdleTimerDisabled = _previousIdleTimerDisabled
     }
     
     override func viewDidLayoutSubviews() {
@@ -176,6 +204,22 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     }
     
     // MARK: - Notifications
+
+    @objc private func _applicationWillResignActive() {
+        _cancelCountdown()
+        if _scanning { _stopScanning(reason: .finished) }
+    }
+
+    @objc private func _applicationDidBecomeActive() {
+        _presentPendingPreview()
+    }
+
+    private func _presentPendingPreview() {
+        guard _pendingPreview, viewIfLoaded?.window != nil,
+              presentedViewController == nil, UIApplication.shared.applicationState == .active else { return }
+        _pendingPreview = false
+        present(_scanPreviewViewController, animated: true)
+    }
     
     @objc private func focusOnTap(_ gesture: UITapGestureRecognizer) {
         guard !_scanning else { return }
@@ -195,10 +239,12 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
                 self._stopScanning(reason: .finished)
             }
             
-            let alertController = UIAlertController(title: "iPhone is too hot!",
-                                                    message: "Please allow iPhone to cool down and try again",
+            let alertController = UIAlertController(title: "iPhone перегрелся",
+                                                    message: "Дайте телефону остыть перед следующим сканированием.",
                                                     preferredStyle: .alert)
-            alertController.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
+            alertController.addAction(UIAlertAction(title: "Понятно", style: .cancel) { [weak self] _ in
+                self?.dismiss(animated: true) { self?._presentPendingPreview() }
+            })
             self.present(alertController, animated: true, completion: nil)
         }
     }
@@ -263,9 +309,8 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         }
         
         if _stopScanOnReconFail && metadata.result == .failed {
-            let assimilatedTooFewFrames = statistics.succeededCount < self._failedScanShowPreviewMinFrameCount
-            
-            self._stopScanning(reason: assimilatedTooFewFrames ? .canceled : .finished)
+            // Preserve any captured geometry for review; an empty result is rejected after finalization.
+            self._stopScanning(reason: .finished)
             
             self._showScanFailedMessage()
         }
@@ -280,17 +325,25 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     private lazy var _scanPreviewViewController: ScanPreviewViewController = {
         let scanVC = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "ScanPreviewViewController") as! ScanPreviewViewController
         
-        scanVC.deletionHandler = { [unowned self] in
+        scanVC.deletionHandler = { [weak self, weak scanVC] in
+            guard let self = self, let scanVC = scanVC else { return }
             if scanVC.scan!.plyPath != nil {
-                self._appDelegate.remove(scanVC.scan!)
+                guard self._appDelegate.remove(scanVC.scan!) else {
+                    scanVC.showFileError("Не удалось удалить скан.")
+                    return
+                }
             }
             self.dismiss(animated: true, completion: nil)
         }
         
-        scanVC.doneHandler = { [unowned self, scanVC] in
+        scanVC.doneHandler = { [weak self, weak scanVC] in
+            guard let self = self, let scanVC = scanVC else { return }
             // Save the scan
             if scanVC.scan!.plyPath == nil {
-                self._appDelegate.add(scanVC.scan!)
+                guard self._appDelegate.add(scanVC.scan!) else {
+                    scanVC.showFileError("Не удалось сохранить скан. Проверьте свободное место и повторите попытку.")
+                    return
+                }
             }
             self.dismiss(animated: true, completion: nil)
         }
@@ -303,7 +356,7 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     }
     
     private var _tapToStartStop: Bool {
-        return UserDefaults.standard.bool(forKey: "tap_to_start_stop")
+        return UserDefaults.standard.bool(forKey: "tap_to_start_stop", defaultValue: true)
     }
     
     private var _useFullResolutionDepthFrames: Bool {
@@ -333,12 +386,15 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         _ = self.view
         
         elapsedDurationLabel.isHidden = !_scanning
-        scanDurationLabel.text = "\(_scanDurationSeconds) sec"
-        elapsedDurationLabel.text = "\(_elapsedSeconds + 1)"
+        scanDurationLabel.text = "\(_scanDurationSeconds) с"
+        elapsedDurationLabel.text = "\(_elapsedSeconds)"
         countdownLabel.isHidden = _countdownSeconds == 0
         countdownLabel.text = "\(_countdownSeconds)"
         shutterButton.setImage(UIImage(named: _scanning ? "CameraButtonRecording" : "CameraButton"), for: UIControl.State.normal)
         shutterButton.isSelected = _countdownSeconds > 0
+        shutterButton.isEnabled = _cameraReady && !_finalizing
+        shutterButton.accessibilityLabel = _scanning ? "Завершить скан" : "Начать скан"
+        showScansButton.isEnabled = !_scanning && !_finalizing && !_appDelegate.scans.isEmpty
         _cameraManager.isFocusLocked = _scanning
     }
     
@@ -372,13 +428,13 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         })
     }
     
-    private let _failedScanShowPreviewMinFrameCount = 50
-    
     private lazy var _maxReconstructionThreadCount: Int32 = {
         return UIDevice.current.userInterfaceIdiom == .pad ? 4 : 2
     }()
     
     private func _startScanning() {
+        guard !_scanning && !_finalizing && _cameraReady else { return }
+        scanFailedLabel.isHidden = true
         AudioAndHapticEngine.shared.scanningBegan()
         
         _scanningTimer = Timer(timeInterval: 1, repeats: true) { [unowned self] timer in
@@ -388,18 +444,19 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
                 self._stopScanning(reason: .finished)
             }
         }
-        RunLoop.current.add(_scanningTimer!, forMode: RunLoop.Mode.default)
+        RunLoop.main.add(_scanningTimer!, forMode: .common)
         
         _elapsedSeconds = 0
-        _scanning = true
         _meshTexturing.reset()
         _frameIndex = 0
+        _scanning = true
     }
     
     private func _stopScanning(reason: ScanningTerminationReason) {
         guard _scanning else { return }
         
         _cameraManager.paused = true
+        _finalizing = reason == .finished
         _scanning = false
         _scanningTimer?.invalidate()
         _scanningTimer = nil
@@ -417,16 +474,28 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
             
             _reconstructionManager.finalize {
                 let pointCloud = self._reconstructionManager.buildPointCloud()
+
+                guard pointCloud.pointCount > 0 else {
+                    self._reconstructionManager.reset()
+                    self._cameraManager.paused = false
+                    self._finalizing = false
+                    self._cameraManager.startSession { _ in }
+                    self._updateUI()
+                    self._showScanFailedMessage()
+                    return
+                }
                 
                 let scan = Scan(pointCloud: pointCloud,
                                 thumbnail: nil,
                                 meshTexturing: self._meshTexturing)
                 
                 self._scanPreviewViewController.scan = scan
-                self.present(self._scanPreviewViewController, animated: true, completion: nil)
-                
                 self._reconstructionManager.reset()
                 self._cameraManager.paused = false
+                self._finalizing = false
+                self._updateUI()
+                self._pendingPreview = true
+                self._presentPendingPreview()
             }
         } else {
             _reconstructionManager.reset()
