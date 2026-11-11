@@ -3,7 +3,7 @@ name: Build Limb Scanner
 on:
   workflow_dispatch:
   push:
-    branches: [feature/limb-scanner-foundation]
+    branches: [feature/limb-scanner-foundation, feature/limb-scan-tracking-recovery]
 
 jobs:
   build:

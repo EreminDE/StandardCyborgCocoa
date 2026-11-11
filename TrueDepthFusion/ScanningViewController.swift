@@ -110,7 +110,9 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         
         _installVolumeShutterButton()
         scanFailedLabel.attributedText = nil
-        scanFailedLabel.text = "Трекинг потерян.\nПеремещайте iPhone медленнее."
+        scanFailedLabel.textColor = .black
+        scanFailedLabel.textAlignment = .center
+        scanFailedLabel.font = .preferredFont(forTextStyle: .body)
         showScansButton.accessibilityLabel = "Последний скан"
         _updateUI()
         
@@ -290,9 +292,11 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
                                didProcessWith metadata: SCAssimilatedFrameMetadata,
                                statistics: SCReconstructionManagerStatistics)
     {
-        _latestViewMatrix = metadata.viewMatrix
-        
+        guard _scanning else { return }
+
         if metadata.result == .succeeded || metadata.result == .poorTracking {
+            _latestViewMatrix = metadata.viewMatrix
+            scanFailedLabel.isHidden = true
             _meshTexturing.cameraCalibrationData = manager.latestCameraCalibrationData
             _meshTexturing.cameraCalibrationFrameWidth = manager.latestCameraCalibrationFrameWidth
             _meshTexturing.cameraCalibrationFrameHeight = manager.latestCameraCalibrationFrameHeight
@@ -309,10 +313,13 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         }
         
         if _stopScanOnReconFail && metadata.result == .failed {
-            // Preserve any captured geometry for review; an empty result is rejected after finalization.
-            self._stopScanning(reason: .finished)
-            
-            self._showScanFailedMessage()
+            _stopScanning(reason: .finished)
+        } else if metadata.result == .lostTracking || metadata.result == .failed {
+            if scanFailedLabel.isHidden {
+                scanFailedLabel.text = "Трекинг потерян.\nВерните iPhone к уже снятому участку и задержите его там."
+                scanFailedLabel.alpha = 1
+                scanFailedLabel.isHidden = false
+            }
         }
     }
     
@@ -365,7 +372,7 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     }
     
     private var _stopScanOnReconFail: Bool {
-           get { return UserDefaults.standard.bool(forKey: "stop_scanning_on_reconstruction_failure", defaultValue: true) }
+           get { return UserDefaults.standard.bool(forKey: "stop_scanning_on_reconstruction_failure", defaultValue: false) }
            set { UserDefaults.standard.set(newValue, forKey: "stop_scanning_on_reconstruction_failure") }
        }
     
@@ -434,6 +441,7 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
     
     private func _startScanning() {
         guard !_scanning && !_finalizing && _cameraReady else { return }
+        scanFailedLabel.layer.removeAllAnimations()
         scanFailedLabel.isHidden = true
         AudioAndHapticEngine.shared.scanningBegan()
         
@@ -458,6 +466,7 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         _cameraManager.paused = true
         _finalizing = reason == .finished
         _scanning = false
+        scanFailedLabel.isHidden = true
         _scanningTimer?.invalidate()
         _scanningTimer = nil
         _elapsedSeconds = 0
@@ -481,7 +490,7 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
                     self._finalizing = false
                     self._cameraManager.startSession { _ in }
                     self._updateUI()
-                    self._showScanFailedMessage()
+                    self._showEmptyScanMessage()
                     return
                 }
                 
@@ -503,14 +512,17 @@ class ScanningViewController: UIViewController, CameraManagerDelegate, SCReconst
         }
     }
     
-    private func _showScanFailedMessage() {
+    private func _showEmptyScanMessage() {
+        scanFailedLabel.text = "Скан пуст. Попробуйте ещё раз."
         scanFailedLabel.isHidden = false
         scanFailedLabel.alpha = 1
         
         UIView.animate(withDuration: 0.8, delay: 3.0, options: [], animations: {
             self.scanFailedLabel.alpha = 0
         }, completion: { finished in
-            self.scanFailedLabel.isHidden = true
+            if finished && !self._scanning {
+                self.scanFailedLabel.isHidden = true
+            }
         })
     }
     

@@ -222,9 +222,7 @@ PBFAssimilatedFrameMetadata PBFModel::assimilate(ProcessedFrame& frame,
             }
         }
         
-        if (frameMeta.icpUnusedIterationFraction > 0) {
-            _extrinsicMatrix = extrinsicMatrixTmp;
-        } else {
+        if (!(frameMeta.icpUnusedIterationFraction > 0)) {
             // It didn't converge in time, so bail out
             DEBUG_LOG("ICP didn't converge with enough quality (%f) after %d/%d iterations. Ignoring frame.", frameMeta.icpUnusedIterationFraction, icpResult.iterationCount, icpConfig.maxIterations);
             _assimilatedFrameMetadatas.push_back(frameMeta);
@@ -240,7 +238,7 @@ PBFAssimilatedFrameMetadata PBFModel::assimilate(ProcessedFrame& frame,
     if (!_surfelFusion.doFusion(surfelFusionConfiguration,
                                 frame,
                                 _surfels,
-                                toMat4x4(_extrinsicMatrix),
+                                toMat4x4(frameMeta.viewMatrix),
                                 screenSpaceLandmarks,
                                 _surfelLandmarksIndex,
                                 _deletedSurfelIndicesList)
@@ -248,6 +246,8 @@ PBFAssimilatedFrameMetadata PBFModel::assimilate(ProcessedFrame& frame,
         DEBUG_LOG("Frame couldn't be fused.");
         frameMeta.icpUnusedIterationFraction = 0;
     } else {
+        // Use only the pose of an accepted frame as the next ICP starting point.
+        _extrinsicMatrix = frameMeta.viewMatrix;
         frameMeta.isMerged = true;
         frameMeta.surfelCount = _surfels.size();
     }
