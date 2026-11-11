@@ -16,7 +16,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         UserDefaults.standard.register(defaults: [
             "tap_to_start_stop": true,
             "full_resolution_depth_frames": false,
-            "stop_scanning_on_reconstruction_failure": true
+            "stop_scanning_on_reconstruction_failure": false
         ])
         reloadScans()
         

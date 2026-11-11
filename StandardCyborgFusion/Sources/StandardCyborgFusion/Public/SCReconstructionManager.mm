@@ -527,7 +527,7 @@ static const float kCenterDepthExpansionRatio = 1.4;
                 case SCAssimilatedFrameResultLostTracking:
                     _inputQueue_statistics.lostTrackingCount += 1;
                     _inputQueue_statistics.consecutiveLostTrackingCount += 1;
-                    // Intentional fall-through
+                    break;
                     
                 case SCAssimilatedFrameResultFailed:
                     _inputQueue_stopped = YES;

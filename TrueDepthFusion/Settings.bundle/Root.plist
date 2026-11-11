@@ -44,7 +44,7 @@
 			<key>Key</key>
 			<string>stop_scanning_on_reconstruction_failure</string>
 			<key>DefaultValue</key>
-			<true/>
+			<false/>
 		</dict>
 		<dict>
 			<key>Type</key>
